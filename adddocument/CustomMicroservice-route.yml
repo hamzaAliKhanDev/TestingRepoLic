@@ -1,0 +1,17 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: adddocument
+  namespace: newgen
+spec:
+  host: ngcustommicroservices.apps.ocpintdev.lic-india.com  # Set your desired domain name here
+  to:
+    kind: Service
+    name: adddocument
+  port:
+    targetPort: http  # Make sure this matches the port exposed by the service
+  # Disable TLS (ensure the route is not using HTTPS)
+  tls: {}  # You can remove this line entirely, or leave it as an empty object to disable HTTPS
+  # Optional: You can add annotations for custom configurations if necessary
+  annotations:
+    description: "Route for adddocument microservice"

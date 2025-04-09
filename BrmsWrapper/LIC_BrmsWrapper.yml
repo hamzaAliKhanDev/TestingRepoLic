@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: licbrmswrapper
+  namespace: newgen                 
+spec:
+  replicas: 1
+  selector:
+      matchLabels:
+        name: licbrmswrapper
+  strategy:
+   type: RollingUpdate
+   rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        name: licbrmswrapper
+    spec:
+      containers:
+      - name: licbrmswrapper
+        image: image-registry.openshift-image-registry.svc:5000/newgen/licbrmswrapper:1.0
+        imagePullPolicy: Always
+        securityContext:
+          runAsNonRoot: true
+        resources:
+          requests:
+            memory: 1024Mi
+            cpu: 500m
+          limits:
+            memory: 1024Mi
+            cpu: 500m
+        volumeMounts:
+        #- name: applicationprop
+        #  mountPath: /Newgen/application.properties
+        #  subPath: springcloud-application.properties
+        #- name: serverinfo
+        #  mountPath: /Newgen/Newgen/NGConfig/omniconf/ServerInfo.json
+        #  subPath: serverinfo.json
+        - name: nfs-volume-mount
+          mountPath: /Newgen/CustomMicroservice/NGLogs/BrmsLogs
+          subPathExpr: NGCustomMicroservice/NGLogs/BrmsLogs/$(POD_NAME)
+        - name: nfs-volume-mount
+          mountPath: /Newgen/CustomMicroservice/BrmsJsonFiles
+          subPathExpr: NGCustomMicroservice/BrmsJsonFiles
+        ports:
+         - name: http
+           containerPort: 8080
+        readinessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 5
+        livenessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 300
+          failureThreshold: 5
+          periodSeconds: 10
+        envFrom:
+        - configMapRef:
+            name: custommicroservices-env          
+        env:
+          - name: JAVA_OPTS
+            value: "-XX:+UseContainerSupport -XX:+DisableExplicitGC -XX:InitialRAMPercentage=50.0 -XX:MaxRAMPercentage=50.0"
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.name
+      volumes:        
+      - name: nfs-volume-mount
+        persistentVolumeClaim:
+          claimName: newgenpvc
+#      - name: serverinfo
+#        configMap:
+#          name: odmicroservices-configmap
+#          items:
+#          - key: serverinfo.json
+#            path: serverinfo.json
+#      - name: applicationprop
+#        configMap:
+#          name: odmicroservices-configmap
+#          items:
+#          - key: springcloud-application.properties
+#            path: springcloud-application.properties
+---          
+ 
+apiVersion: v1
+kind: Service
+metadata:
+  name: licbrmswrapper
+  namespace: newgen
+spec: 
+  selector:
+   name: licbrmswrapper
+  ports:
+   - name: http
+     port: 8080
+     targetPort: 8080
+# For Expose
+  type: ClusterIP
